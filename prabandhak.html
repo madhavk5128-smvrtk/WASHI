@@ -4,93 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>स्वच्छम्‌ // PRABANDHAK PORTAL</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Arya:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
 
         :root {
-            --bg-earth: #5C2C26; 
-            --panel-bg: #3D1C17; 
-            --text-cream: #F4E8D1; 
-            --accent-gold: #DDA77B; 
-            --accent-saffron: #D35400;
+            --bg-earth: #5C2C26; --panel-bg: #3D1C17; --text-cream: #F4E8D1; 
+            --accent-gold: #DDA77B; --accent-saffron: #D35400;
         }
 
         body {
             background-color: var(--bg-earth);
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='%23DDA77B' fill-opacity='0.12'%3E%3Cpath d='M0 0h20v20H0zM20 20h20v20H20z'/%3E%3Ccircle cx='10' cy='30' r='4'/%3E%3Ccircle cx='30' cy='10' r='4'/%3E%3C/g%3E%3C/svg%3E");
-            color: var(--text-cream);
-            font-family: 'Lora', serif;
-            margin: 0; padding: 20px;
-            display: flex; justify-content: center;
+            color: var(--text-cream); font-family: 'Lora', serif;
+            margin: 0; padding: 20px; display: flex; justify-content: center;
             align-items: center; min-height: 100vh;
         }
 
         .container {
-            max-width: 600px; width: 100%;
-            background-color: var(--panel-bg);
-            border: 4px double var(--accent-gold);
-            border-top-left-radius: 60px; border-top-right-radius: 60px;
-            padding: 40px 30px 30px 30px; box-sizing: border-box;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative;
+            max-width: 600px; width: 100%; background-color: var(--panel-bg);
+            border: 4px double var(--accent-gold); border-top-left-radius: 60px;
+            border-top-right-radius: 60px; padding: 40px 30px 30px 30px; 
+            box-sizing: border-box; box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative;
         }
 
         .container::before {
-            content: '❖'; position: absolute; top: 10px;
-            left: 50%; transform: translateX(-50%);
-            color: var(--accent-gold); font-size: 1.5rem;
+            content: '❖'; position: absolute; top: 10px; left: 50%;
+            transform: translateX(-50%); color: var(--accent-gold); font-size: 1.5rem;
         }
 
-        header {
-            text-align: center; border-bottom: 2px solid var(--accent-gold);
-            padding-bottom: 20px; margin-bottom: 30px;
-        }
-
-        h1 {
-            font-family: 'Arya', sans-serif; font-size: 3.5rem;
-            color: var(--accent-gold); margin: 0 0 5px 0; font-weight: 700;
-        }
-
+        header { text-align: center; border-bottom: 2px solid var(--accent-gold); padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { font-family: 'Arya', sans-serif; font-size: 3.5rem; color: var(--accent-gold); margin: 0 0 5px 0; font-weight: 700; }
         .subtitle { font-size: 1.1rem; margin: 0; color: var(--text-cream); }
 
-        .section-title {
-            font-size: 1.1rem; color: var(--accent-gold);
-            margin-bottom: 15px; font-weight: bold;
-            display: flex; align-items: center;
-        }
+        .section-title { font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 15px; font-weight: bold; display: flex; align-items: center; }
         .section-title::before { content: "❁ "; margin-right: 8px; font-size: 1.2rem; }
 
-        .panel {
-            border: 1px solid var(--accent-gold); padding: 20px;
-            margin-bottom: 30px; background-color: rgba(0,0,0,0.2);
-            border-radius: 4px;
-        }
-
+        .panel { border: 1px solid var(--accent-gold); padding: 20px; margin-bottom: 30px; background-color: rgba(0,0,0,0.2); border-radius: 4px; }
+        
         .token-display {
-            font-size: 2.8rem; text-align: center; letter-spacing: 6px;
-            color: var(--text-cream); padding: 20px 10px;
-            border: 2px dashed var(--accent-gold); margin-bottom: 20px;
-            font-weight: bold; min-height: 50px;
+            font-size: 2.8rem; text-align: center; letter-spacing: 6px; color: var(--text-cream); 
+            padding: 20px 10px; border: 2px dashed var(--accent-gold); margin-bottom: 20px; font-weight: bold; min-height: 50px;
         }
 
         button {
-            background-color: var(--accent-saffron); color: var(--text-cream);
-            border: 2px solid var(--accent-gold); padding: 15px;
-            font-family: 'Lora', serif; font-size: 1.2rem; font-weight: bold;
-            width: 100%; cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 2px 2px 0px var(--accent-gold); border-radius: 4px;
+            background-color: var(--accent-saffron); color: var(--text-cream); border: 2px solid var(--accent-gold); 
+            padding: 15px; font-family: 'Lora', serif; font-size: 1.2rem; font-weight: bold; width: 100%; 
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 2px 2px 0px var(--accent-gold); border-radius: 4px;
         }
         button:hover { background-color: var(--accent-gold); color: var(--panel-bg); box-shadow: 4px 4px 0px #000; }
         button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
 
-        .log-window {
-            height: 120px; overflow-y: auto; font-size: 0.95rem;
-            line-height: 1.6; padding: 10px; background: rgba(0,0,0,0.3);
-            border: 1px solid var(--accent-gold); border-radius: 4px;
-        }
-
+        .log-window { height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--accent-gold); border-radius: 4px; }
         .log-window span { color: var(--accent-gold); font-weight: bold; }
         .log-window .warning { color: var(--accent-saffron); font-style: italic;}
 
@@ -124,54 +88,26 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. PASTE YOUR FIREBASE CONFIGURATION HERE
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        // ==========================================
-
         const generateBtn = document.getElementById('generateBtn');
         const tokenOutput = document.getElementById('tokenOutput');
         const logConsole = document.getElementById('logConsole');
         const clearLogBtn = document.getElementById('clearLog');
 
-        const IDLE_TIMEOUT = 12 * 60 * 1000; 
-        let idleTimer;
-
-        function resetIdleTimer() {
-            clearTimeout(idleTimer);
-            idleTimer = setTimeout(logoutSystem, IDLE_TIMEOUT);
-        }
-
-        function logoutSystem() {
-            tokenOutput.innerText = '****-****';
-            addLog('12 मिनट की निष्क्रियता। (12 mins idle)', 'warning');
-            addLog('सत्र समाप्त। (Session Expired)', 'warning');
-        }
-
-        ['mousemove', 'keydown', 'click', 'scroll'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
-        resetIdleTimer();
-
         function generateRandomToken() {
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let part1 = ''; let part2 = '';
-            
             for (let i = 0; i < 3; i++) part1 += chars.charAt(Math.floor(Math.random() * chars.length));
             for (let i = 0; i < 3; i++) part2 += chars.charAt(Math.floor(Math.random() * chars.length));
             
             const mirrorChar = chars.charAt(Math.floor(Math.random() * chars.length));
-            return `${part1}${mirrorChar}-${mirrorChar}${part2}`;
+            const newToken = `${part1}${mirrorChar}-${mirrorChar}${part2}`;
+            
+            // Save to LocalStorage for Client to read
+            let activeTokens = JSON.parse(localStorage.getItem('swachham_tokens') || '[]');
+            activeTokens.push(newToken);
+            localStorage.setItem('swachham_tokens', JSON.stringify(activeTokens));
+            
+            return newToken;
         }
 
         function addLog(msg, type = '') {
@@ -181,21 +117,11 @@
         }
 
         generateBtn.addEventListener('click', () => {
-            addLog('Generating secure token...');
+            addLog('Generating secure single-use token...');
             setTimeout(() => {
                 const newToken = generateRandomToken();
                 tokenOutput.innerText = newToken;
-                
-                // SEND TOKEN TO FIREBASE DATABASE
-                database.ref('swachham_tokens/' + newToken).set({
-                    status: 'active',
-                    timestamp: Date.now()
-                }).then(() => {
-                    addLog(`Success: Token <span>${newToken}</span> synced to cloud.`);
-                }).catch((error) => {
-                    addLog('Error syncing to cloud.', 'warning');
-                });
-                
+                addLog(`Success: Token <span>${newToken}</span> issued and saved.`);
             }, 500);
         });
 
