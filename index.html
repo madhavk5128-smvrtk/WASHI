@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>स्वच्छम्‌ // LAUNDRY CONTROL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Arya:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --bg-sand: #F9F4EB; 
+            --panel-bg: #FFF9F0;
+            --text-dark: #3E2723; 
+            --accent-red: #8B3A33; 
+            --accent-green: #2E7D32; 
+            --border-color: #8B3A33;
+        }
+
+        body {
+            background-color: var(--bg-sand);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%238B3A33' fill-opacity='0.08'%3E%3Cpath d='M40 0C40 22 22 40 0 40C22 40 40 58 40 80C40 58 58 40 80 40C58 40 40 22 40 0Z'/%3E%3Ccircle cx='40' cy='40' r='5'/%3E%3C/g%3E%3C/svg%3E");
+            color: var(--text-dark);
+            font-family: 'Lora', serif;
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center;
+            align-items: flex-start; min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px; width: 100%;
+            background-color: var(--panel-bg);
+            border: 4px double var(--border-color);
+            border-top-left-radius: 60px;
+            border-top-right-radius: 60px;
+            padding: 40px 30px 30px 30px; 
+            box-sizing: border-box;
+            margin-top: 20px; 
+            box-shadow: 0 15px 30px rgba(139, 58, 51, 0.15);
+            position: relative;
+        }
+
+        .container::before {
+            content: '❁';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--border-color);
+            font-size: 1.8rem;
+        }
+
+        header {
+            text-align: center; border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px; margin-bottom: 30px;
+        }
+
+        h1 {
+            font-family: 'Arya', sans-serif; font-size: 3.5rem;
+            color: var(--accent-red); margin: 0 0 5px 0; font-weight: 700;
+        }
+
+        .subtitle { font-size: 1.1rem; color: var(--text-dark); margin: 0; }
+
+        .section-title {
+            font-size: 1.1rem; color: var(--accent-red); margin-bottom: 15px;
+            font-weight: bold; display: flex; align-items: center;
+        }
+        .section-title::before { content: "❁ "; margin-right: 8px; font-size: 1.2rem;}
+
+        .panel {
+            border: 1px solid var(--border-color); padding: 20px;
+            margin-bottom: 30px; background: #FAFAFA; transition: opacity 0.3s ease;
+            border-radius: 4px;
+        }
+
+        input[type="text"] {
+            width: 100%; background-color: transparent; border: none;
+            border-bottom: 2px dashed var(--accent-red); color: var(--text-dark);
+            font-family: 'Lora', serif; font-size: 2.2rem; text-align: center;
+            letter-spacing: 5px; padding: 10px; box-sizing: border-box;
+            margin-bottom: 20px; text-transform: uppercase; outline: none; font-weight: bold;
+        }
+        input[type="text"]::placeholder { color: #BCAAA4; font-size: 1.2rem; letter-spacing: 2px; font-weight: normal; }
+
+        button {
+            background-color: var(--accent-red); color: var(--bg-sand);
+            border: 2px solid var(--accent-red); padding: 12px 5px;
+            font-family: 'Lora', serif; font-size: 1rem; font-weight: bold;
+            width: 100%; cursor: pointer; transition: all 0.2s ease;
+            box-shadow: 2px 2px 0px var(--text-dark);
+            border-radius: 4px;
+        }
+        button:hover:not(:disabled) { background-color: var(--text-dark); border-color: var(--text-dark); color: var(--bg-sand); }
+        button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0px 0px 0px transparent; }
+        button:disabled { background-color: #D7CCC8; border-color: #D7CCC8; color: #8D6E63; box-shadow: none; cursor: not-allowed; }
+
+        .locked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+
+        .cycle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+        /* --- ANALOG CLOCK STYLING --- */
+        .clock-container {
+            display: flex; justify-content: center; align-items: center;
+            margin-top: 30px; gap: 30px;
+        }
+
+        .analog-clock {
+            width: 120px; height: 120px; border: 4px solid var(--border-color);
+            border-radius: 50%; position: relative; background: var(--panel-bg);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        
+        .analog-clock::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 10px; height: 10px; background: var(--text-dark);
+            border-radius: 50%; transform: translate(-50%, -50%); z-index: 10;
+        }
+
+        .clock-mark {
+            position: absolute; width: 2px; height: 8px; background: var(--border-color);
+            top: 0; left: 50%; transform-origin: 50% 60px; transform: translateX(-50%);
+        }
+        .m12 { transform: translateX(-50%) rotate(0deg); }
+        .m3 { transform: translateX(-50%) rotate(90deg); }
+        .m6 { transform: translateX(-50%) rotate(180deg); }
+        .m9 { transform: translateX(-50%) rotate(270deg); }
+
+        .hand {
+            position: absolute; bottom: 50%; left: 50%;
+            transform-origin: bottom; border-radius: 4px; z-index: 5;
+            transition: transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+        }
+
+        .min-hand {
+            width: 4px; height: 35px; background: var(--accent-red);
+            transform: translateX(-50%) rotate(0deg);
+        }
+
+        .sec-hand {
+            width: 2px; height: 45px; background: var(--accent-green);
+            transform: translateX(-50%) rotate(0deg);
+        }
+
+        .timer-display {
+            font-size: 2.8rem; text-align: center; color: var(--accent-red);
+            font-weight: bold; width: 120px;
+        }
+
+        .log-window {
+            height: 120px; overflow-y: auto; font-size: 0.95rem;
+            line-height: 1.6; padding: 10px; background: #FFF;
+            border: 1px inset var(--border-color); border-radius: 4px;
+        }
+
+        .log-window .success { color: var(--accent-green); font-weight: bold;}
+        .log-window .error { color: #D32F2F; font-weight: bold;}
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-sand); }
+        ::-webkit-scrollbar-thumb { background: var(--accent-red); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>स्वच्छम्‌</h1>
+            <p class="subtitle">यन्त्र नियन्त्रण // MACHINE CONTROL</p>
+        </header>
+
+        <div class="section-title">प्रवेश मुद्रा // ACCESS TOKEN</div>
+        <div class="panel" id="tokenPanel">
+            <input type="text" id="tokenInput" placeholder="ENTER TOKEN" maxlength="9">
+            <button id="verifyBtn">सत्यापित करें // VERIFY</button>
+        </div>
+
+        <div class="section-title">यन्त्र संपर्क // BLUETOOTH</div>
+        <div class="panel locked" id="btPanel">
+            <p style="text-align: center; margin-top:0; font-weight:bold;" id="btStatus">NOT CONNECTED</p>
+            <button id="connectBtn">CONNECT TO WASHER</button>
+        </div>
+
+        <div class="section-title">चक्र चुनें // SELECT CYCLE</div>
+        <div class="panel locked" id="cyclePanel">
+            <div class="cycle-grid">
+                <button class="cycleBtn" data-time="25">शीघ्र // 25 MIN</button>
+                <button class="cycleBtn" data-time="40">पूर्ण // 40 MIN</button>
+                <button class="cycleBtn" data-time="6">शुष्क // 6 MIN</button>
+            </div>
+            
+            <div class="clock-container">
+                <div class="analog-clock">
+                    <div class="clock-mark m12"></div>
+                    <div class="clock-mark m3"></div>
+                    <div class="clock-mark m6"></div>
+                    <div class="clock-mark m9"></div>
+                    <div class="hand min-hand" id="minHand"></div>
+                    <div class="hand sec-hand" id="secHand"></div>
+                </div>
+                <div class="timer-display" id="timerOutput">--:--</div>
+            </div>
+        </div>
+
+        <div class="section-title" style="justify-content: space-between;">
+            <span>पंजीका // LOG</span>
+            <span style="cursor:pointer; font-size: 0.9rem;" id="clearLog">CLEAR</span>
+        </div>
+        <div class="log-window" id="logConsole">
+            • स्वागतम् (Welcome)<br>
+            • Please enter your token to begin...<br>
+        </div>
+    </div>
+
+    <script>
+        const tokenInput = document.getElementById('tokenInput');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const btPanel = document.getElementById('btPanel');
+        const cyclePanel = document.getElementById('cyclePanel');
+        const logConsole = document.getElementById('logConsole');
+        const connectBtn = document.getElementById('connectBtn');
+        const btStatus = document.getElementById('btStatus');
+        const cycleBtns = document.querySelectorAll('.cycleBtn');
+        
+        const timerOutput = document.getElementById('timerOutput');
+        const minHand = document.getElementById('minHand');
+        const secHand = document.getElementById('secHand');
+
+        let isUnlocked = false;
+        let isConnected = false;
+        let totalSeconds = 0;
+        let cycleTimerInterval = null;
+
+        const IDLE_TIMEOUT = 12 * 60 * 1000; 
+        let idleTimer;
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(lockSystem, IDLE_TIMEOUT);
+        }
+
+        function lockSystem() {
+            if (!isUnlocked) return; 
+            isUnlocked = false;
+            
+            tokenInput.disabled = false;
+            tokenInput.value = '';
+            verifyBtn.disabled = false;
+            verifyBtn.innerText = 'सत्यापित करें // VERIFY';
+            
+            btPanel.classList.add('locked');
+            cyclePanel.classList.add('locked');
+            
+            addLog('12 मिनट की निष्क्रियता। (12 min idle.)', 'error');
+            addLog('सत्र समाप्त। कृपया मुद्रा पुनः दर्ज करें। (Session expired. Re-enter token.)', 'error');
+        }
+
+        ['mousemove', 'keydown', 'click', 'scroll'].forEach(evt => 
+            document.addEventListener(evt, resetIdleTimer)
+        );
+        resetIdleTimer();
+
+        tokenInput.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            if (val.length > 4) val = val.substring(0, 4) + '-' + val.substring(4, 8);
+            e.target.value = val;
+        });
+
+        function addLog(msg, type = '') {
+            let spanClass = type ? `class="${type}"` : '';
+            logConsole.innerHTML += `• <span ${spanClass}>${msg}</span><br>`;
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+
+        verifyBtn.addEventListener('click', () => {
+            if (isUnlocked) return;
+            const token = tokenInput.value;
+            const tokenRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+
+            addLog(`Verifying token...`);
+            setTimeout(() => {
+                // THE SECRET ALGORITHM VERIFICATION
+                const isFormatCorrect = tokenRegex.test(token);
+                const isAlgorithmCorrect = token.charAt(3) === token.charAt(5);
+
+                if (isFormatCorrect && isAlgorithmCorrect) {
+                    addLog('Access Granted. (अनुमति प्राप्त)', 'success');
+                    isUnlocked = true;
+                    tokenInput.disabled = true;
+                    verifyBtn.disabled = true;
+                    verifyBtn.innerText = 'UNLOCKED';
+                    
+                    btPanel.classList.remove('locked');
+                    if(isConnected) cyclePanel.classList.remove('locked');
+                    
+                    resetIdleTimer(); 
+                } else {
+                    addLog('Access Denied. Invalid Token.', 'error');
+                    tokenInput.value = '';
+                }
+            }, 600);
+        });
+
+        connectBtn.addEventListener('click', () => {
+            addLog('Searching for Swachham Unit...');
+            connectBtn.innerText = 'SCANNING...';
+            setTimeout(() => {
+                isConnected = true;
+                btStatus.innerText = 'CONNECTED: SWACHHAM-01';
+                btStatus.style.color = 'var(--accent-green)';
+                connectBtn.disabled = true;
+                connectBtn.innerText = 'PAIRED';
+                cyclePanel.classList.remove('locked');
+                addLog('Washer connected successfully.', 'success');
+            }, 1000);
+        });
+
+        function startCycle(minutes) {
+            totalSeconds = minutes * 60;
+            clearInterval(cycleTimerInterval);
+            updateClockUI(); 
+
+            cycleTimerInterval = setInterval(() => {
+                if (totalSeconds <= 0) {
+                    clearInterval(cycleTimerInterval);
+                    addLog('Cycle Complete! (चक्र पूर्ण)', 'success');
+                    cycleBtns.forEach(b => b.disabled = false); 
+                    return;
+                }
+                totalSeconds--;
+                updateClockUI();
+            }, 1000);
+        }
+
+        function updateClockUI() {
+            let m = Math.floor(totalSeconds / 60);
+            let s = totalSeconds % 60;
+            
+            timerOutput.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            
+            let secDeg = s * 6; 
+            let minDeg = (m * 6) + (s * 0.1); 
+            
+            secHand.style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+            minHand.style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+        }
+
+        cycleBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (!isConnected) return;
+                const time = parseInt(e.target.getAttribute('data-time'));
+                const modeText = time === 6 ? "Drying" : "Wash";
+                addLog(`${modeText} Cycle started: ${time} Minutes.`, 'success');
+                
+                cycleBtns.forEach(b => b.disabled = true);
+                startCycle(time);
+            });
+        });
+
+        document.getElementById('clearLog').addEventListener('click', () => {
+            logConsole.innerHTML = '• Log cleared.<br>';
+            if (!isUnlocked) addLog('Please enter your token to begin...');
+        });
+    </script>
+</body>
+</html>
