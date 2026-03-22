@@ -3,54 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>स्वच्छम्‌ // LAUNDRY SYSTEM</title>
+    <title>स्वच्छम्‌ // LAUNDRY CONTROL</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Arya:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
 
         :root {
-            /* Client Theme (Sandstone) */
             --bg-sand: #F9F4EB; --panel-bg: #FFF9F0; --text-dark: #3E2723; 
             --accent-red: #8B3A33; --accent-green: #2E7D32; --border-color: #8B3A33;
-            /* Admin Theme (Terracotta) */
-            --admin-bg: #5C2C26; --admin-panel: #3D1C17; --admin-text: #F4E8D1; 
-            --admin-gold: #DDA77B; --admin-saffron: #D35400;
         }
 
         body {
             background-color: var(--bg-sand);
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%238B3A33' fill-opacity='0.08'%3E%3Cpath d='M40 0C40 22 22 40 0 40C22 40 40 58 40 80C40 58 58 40 80 40C58 40 40 22 40 0Z'/%3E%3Ccircle cx='40' cy='40' r='5'/%3E%3C/g%3E%3C/svg%3E");
             color: var(--text-dark); font-family: 'Lora', serif;
-            margin: 0; padding: 20px; display: flex; justify-content: center;
-            align-items: flex-start; min-height: 100vh;
+            margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh;
         }
 
-        /* --- CLIENT UI STYLES --- */
         .container {
             max-width: 600px; width: 100%; background-color: var(--panel-bg);
             border: 4px double var(--border-color); border-top-left-radius: 60px;
             border-top-right-radius: 60px; padding: 40px 30px 30px 30px; 
-            box-sizing: border-box; margin-top: 20px; 
-            box-shadow: 0 15px 30px rgba(139, 58, 51, 0.15); position: relative;
+            box-sizing: border-box; margin-top: 20px; box-shadow: 0 15px 30px rgba(139, 58, 51, 0.15); position: relative;
         }
 
-        .container::before {
-            content: '❁'; position: absolute; top: 8px; left: 50%;
-            transform: translateX(-50%); color: var(--border-color); font-size: 1.8rem;
-        }
-
+        .container::before { content: '❁'; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); color: var(--border-color); font-size: 1.8rem; }
         header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 30px; }
-        
-        /* Secret Click Target */
-        h1 {
-            font-family: 'Arya', sans-serif; font-size: 3.5rem; color: var(--accent-red); 
-            margin: 0 0 5px 0; font-weight: 700; cursor: pointer; user-select: none;
-        }
-        
+        h1 { font-family: 'Arya', sans-serif; font-size: 3.5rem; color: var(--accent-red); margin: 0 0 5px 0; font-weight: 700; }
         .subtitle { font-size: 1.1rem; color: var(--text-dark); margin: 0; }
         .section-title { font-size: 1.1rem; color: var(--accent-red); margin-bottom: 15px; font-weight: bold; display: flex; align-items: center; }
         .section-title::before { content: "❁ "; margin-right: 8px; font-size: 1.2rem;}
 
-        .panel { border: 1px solid var(--border-color); padding: 20px; margin-bottom: 30px; background: #FAFAFA; border-radius: 4px; }
+        .panel { border: 1px solid var(--border-color); padding: 20px; margin-bottom: 30px; background: #FAFAFA; transition: opacity 0.3s ease; border-radius: 4px; }
 
         input[type="text"] {
             width: 100%; background-color: transparent; border: none; border-bottom: 2px dashed var(--accent-red); 
@@ -69,6 +52,8 @@
         button:disabled { background-color: #D7CCC8; border-color: #D7CCC8; color: #8D6E63; box-shadow: none; cursor: not-allowed; }
 
         .locked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
+        .busy-lock { opacity: 0.6; pointer-events: none; } /* Specific class for when machine is running */
+
         .cycle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .clock-container { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 30px; }
 
@@ -84,32 +69,6 @@
         .log-window { height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 10px; background: #FFF; border: 1px inset var(--border-color); border-radius: 4px; }
         .log-window .success { color: var(--accent-green); font-weight: bold;} .log-window .error { color: #D32F2F; font-weight: bold;}
         
-        /* --- HIDDEN ADMIN OVERLAY STYLES --- */
-        #admin-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
-        }
-
-        .admin-container {
-            max-width: 500px; width: 90%; background-color: var(--admin-panel); color: var(--admin-text);
-            border: 4px double var(--admin-gold); border-radius: 8px; padding: 30px; position: relative;
-        }
-
-        .admin-title { font-family: 'Arya', sans-serif; font-size: 2.5rem; color: var(--admin-gold); margin: 0 0 20px 0; text-align: center; }
-        .close-admin { position: absolute; top: 15px; right: 20px; color: var(--admin-gold); font-size: 1.5rem; cursor: pointer; font-family: sans-serif; }
-        
-        .admin-token-display {
-            font-size: 2.5rem; text-align: center; letter-spacing: 5px; color: var(--admin-text);
-            padding: 20px 10px; border: 2px dashed var(--admin-gold); margin-bottom: 20px; background: rgba(0,0,0,0.3);
-        }
-
-        .admin-btn {
-            background-color: var(--admin-saffron); color: var(--admin-text); border: 2px solid var(--admin-gold);
-            padding: 15px; font-size: 1.2rem; box-shadow: 2px 2px 0px var(--admin-gold); margin-bottom: 10px;
-        }
-        .admin-btn:hover { background-color: var(--admin-gold); color: var(--admin-panel); box-shadow: 4px 4px 0px #000; }
-        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-sand); }
         ::-webkit-scrollbar-thumb { background: var(--accent-red); }
@@ -119,7 +78,7 @@
 
     <div class="container">
         <header>
-            <h1 id="main-title">स्वच्छम्‌</h1>
+            <h1>स्वच्छम्‌</h1>
             <p class="subtitle">यन्त्र नियन्त्रण // MACHINE CONTROL</p>
         </header>
 
@@ -164,72 +123,17 @@
         </div>
     </div>
 
-    <div id="admin-overlay">
-        <div class="admin-container">
-            <div class="close-admin" id="closeAdminBtn">✕</div>
-            <h2 class="admin-title">प्रबन्धक // MANAGER</h2>
-            <div class="admin-token-display" id="adminTokenOutput">****-****</div>
-            <button class="admin-btn" id="generateAdminBtn">ISSUE NEW TOKEN</button>
-            <p style="text-align: center; font-size: 0.9rem; color: var(--admin-gold); margin-top: 15px;">
-                Tokens generated here are saved directly to this device's memory for single-use verification.
-            </p>
-        </div>
-    </div>
-
     <script>
-        // --- 1. SECRET ADMIN TOGGLE LOGIC ---
-        const mainTitle = document.getElementById('main-title');
-        const adminOverlay = document.getElementById('admin-overlay');
-        const closeAdminBtn = document.getElementById('closeAdminBtn');
-        let clickCount = 0;
-        let clickTimer;
-
-        // Click title 5 times quickly to open admin
-        mainTitle.addEventListener('click', () => {
-            clickCount++;
-            clearTimeout(clickTimer);
-            if (clickCount >= 5) {
-                adminOverlay.style.display = 'flex';
-                clickCount = 0;
-            } else {
-                clickTimer = setTimeout(() => clickCount = 0, 1500); // 1.5 sec window to click 5 times
-            }
-        });
-
-        closeAdminBtn.addEventListener('click', () => {
-            adminOverlay.style.display = 'none';
-        });
-
-        // --- 2. ADMIN GENERATOR LOGIC ---
-        const generateAdminBtn = document.getElementById('generateAdminBtn');
-        const adminTokenOutput = document.getElementById('adminTokenOutput');
-
-        generateAdminBtn.addEventListener('click', () => {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let part1 = ''; let part2 = '';
-            for (let i = 0; i < 3; i++) part1 += chars.charAt(Math.floor(Math.random() * chars.length));
-            for (let i = 0; i < 3; i++) part2 += chars.charAt(Math.floor(Math.random() * chars.length));
-            const mirrorChar = chars.charAt(Math.floor(Math.random() * chars.length));
-            const newToken = `${part1}${mirrorChar}-${mirrorChar}${part2}`;
-            
-            // Save to LOCAL device memory
-            let activeTokens = JSON.parse(localStorage.getItem('swachham_tokens') || '[]');
-            activeTokens.push(newToken);
-            localStorage.setItem('swachham_tokens', JSON.stringify(activeTokens));
-            
-            adminTokenOutput.innerText = newToken;
-        });
-
-
-        // --- 3. CLIENT LOGIC & BLUETOOTH ---
         const tokenInput = document.getElementById('tokenInput');
         const verifyBtn = document.getElementById('verifyBtn');
+        const tokenPanel = document.getElementById('tokenPanel');
         const btPanel = document.getElementById('btPanel');
         const cyclePanel = document.getElementById('cyclePanel');
         const logConsole = document.getElementById('logConsole');
         const connectBtn = document.getElementById('connectBtn');
         const btStatus = document.getElementById('btStatus');
         const cycleBtns = document.querySelectorAll('.cycleBtn');
+        
         const timerOutput = document.getElementById('timerOutput');
         const minHand = document.getElementById('minHand');
         const secHand = document.getElementById('secHand');
@@ -237,14 +141,43 @@
         let isUnlocked = false; let isConnected = false;
         let totalSeconds = 0; let cycleTimerInterval = null; let bluetoothDevice = null;
 
-        // Auto Logout
+        // --- ON LOAD: CHECK IF A CYCLE IS CURRENTLY RUNNING ---
+        window.addEventListener('load', () => {
+            const savedEndTime = localStorage.getItem('swachham_active_end');
+            if (savedEndTime) {
+                const remainingMs = parseInt(savedEndTime) - Date.now();
+                if (remainingMs > 0) {
+                    // Machine is busy! Lock the UI and resume the timer.
+                    addLog('Machine is currently BUSY. Please wait.', 'error');
+                    tokenInput.placeholder = "MACHINE IN USE";
+                    tokenPanel.classList.add('busy-lock');
+                    btPanel.classList.add('locked');
+                    cyclePanel.classList.remove('locked');
+                    cycleBtns.forEach(b => b.disabled = true);
+                    
+                    startTimerLogic(Math.ceil(remainingMs / 1000));
+                } else {
+                    // Previous cycle finished while the browser was closed. Clean up.
+                    localStorage.removeItem('swachham_active_end');
+                }
+            }
+        });
+
+        // Auto Logout (Only triggers if the machine IS NOT running)
         const IDLE_TIMEOUT = 12 * 60 * 1000; let idleTimer;
-        function resetIdleTimer() { clearTimeout(idleTimer); idleTimer = setTimeout(lockSystem, IDLE_TIMEOUT); }
+        function resetIdleTimer() { 
+            clearTimeout(idleTimer); 
+            // Don't auto-logout if the machine is actively washing
+            if (!localStorage.getItem('swachham_active_end')) {
+                idleTimer = setTimeout(lockSystem, IDLE_TIMEOUT); 
+            }
+        }
         
         function lockSystem() {
             if (!isUnlocked) return; 
             isUnlocked = false;
-            tokenInput.disabled = false; tokenInput.value = '';
+            tokenPanel.classList.remove('busy-lock');
+            tokenInput.disabled = false; tokenInput.value = ''; tokenInput.placeholder = "ENTER TOKEN";
             verifyBtn.disabled = false; verifyBtn.innerText = 'सत्यापित करें // VERIFY';
             btPanel.classList.add('locked'); cyclePanel.classList.add('locked');
             
@@ -254,14 +187,12 @@
                 btStatus.style.color = 'var(--text-dark)'; connectBtn.disabled = false;
                 connectBtn.innerText = 'CONNECT TO WASHER';
             }
-            addLog('12 मिनट की निष्क्रियता। (12 min idle.)', 'error');
             addLog('सत्र समाप्त। कृपया मुद्रा पुनः दर्ज करें। (Session expired.)', 'error');
         }
 
         ['mousemove', 'keydown', 'click', 'scroll'].forEach(evt => document.addEventListener(evt, resetIdleTimer));
         resetIdleTimer();
 
-        // Token Input formatting
         tokenInput.addEventListener('input', (e) => {
             let val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
             if (val.length > 4) val = val.substring(0, 4) + '-' + val.substring(4, 8);
@@ -274,7 +205,7 @@
             logConsole.scrollTop = logConsole.scrollHeight;
         }
 
-        // Verify Token from Local Memory
+        // Token Verification
         verifyBtn.addEventListener('click', () => {
             if (isUnlocked) return;
             const token = tokenInput.value;
@@ -289,7 +220,6 @@
                 const tokenIndex = activeTokens.indexOf(token);
 
                 if (isFormatCorrect && isAlgorithmCorrect && tokenIndex !== -1) {
-                    // Delete token so it can't be reused
                     activeTokens.splice(tokenIndex, 1);
                     localStorage.setItem('swachham_tokens', JSON.stringify(activeTokens));
 
@@ -306,15 +236,14 @@
             }, 600);
         });
 
-        // Real Bluetooth Connection
+        // Web Bluetooth Connection
         connectBtn.addEventListener('click', async () => {
-            if (!navigator.bluetooth) { addLog('Web Bluetooth not supported on this browser/device.', 'error'); return; }
+            if (!navigator.bluetooth) { addLog('Web Bluetooth not supported on this browser.', 'error'); return; }
             addLog('Requesting Bluetooth permissions...'); connectBtn.innerText = 'SCANNING...';
             try {
-                // OPENS NATIVE DEVICE SCANNER
                 bluetoothDevice = await navigator.bluetooth.requestDevice({ 
                     acceptAllDevices: true, 
-                    optionalServices: ['generic_access'] 
+                    optionalServices: ['generic_access', '0000fe60-0000-1000-8000-00805f9b34fb'] 
                 });
                 
                 addLog(`Pairing with: ${bluetoothDevice.name || 'Unknown Device'}`, 'success');
@@ -339,13 +268,20 @@
             connectBtn.innerText = 'CONNECT TO WASHER'; cyclePanel.classList.add('locked');
         }
 
-        // Timer and Clock Logic
-        function startCycle(minutes) {
-            totalSeconds = minutes * 60; clearInterval(cycleTimerInterval); updateClockUI(); 
+        // --- TIMER AND LOCKOUT LOGIC ---
+        function startTimerLogic(secondsRemaining) {
+            totalSeconds = secondsRemaining; 
+            clearInterval(cycleTimerInterval); 
+            updateClockUI(); 
+            
             cycleTimerInterval = setInterval(() => {
                 if (totalSeconds <= 0) {
-                    clearInterval(cycleTimerInterval); addLog('Cycle Complete! (चक्र पूर्ण)', 'success');
-                    cycleBtns.forEach(b => b.disabled = false); return;
+                    clearInterval(cycleTimerInterval); 
+                    localStorage.removeItem('swachham_active_end'); // Clear the lock
+                    addLog('Cycle Complete! (चक्र पूर्ण)', 'success');
+                    cycleBtns.forEach(b => b.disabled = false); 
+                    lockSystem(); // Immediately lock the system to require a new token for the next person
+                    return;
                 }
                 totalSeconds--; updateClockUI();
             }, 1000);
@@ -360,16 +296,29 @@
 
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                if (!isConnected) return;
-                const time = parseInt(e.target.getAttribute('data-time'));
-                addLog(`${time === 6 ? "Drying" : "Wash"} Cycle started: ${time} Minutes.`, 'success');
-                cycleBtns.forEach(b => b.disabled = true); startCycle(time);
+                if (!isConnected && !localStorage.getItem('swachham_active_end')) return;
+                
+                const timeMinutes = parseInt(e.target.getAttribute('data-time'));
+                addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started: ${timeMinutes} Minutes.`, 'success');
+                
+                // SAVE THE EXPECTED COMPLETION TIME TO PREVENT DOUBLE BOOKING
+                const completionTime = Date.now() + (timeMinutes * 60 * 1000);
+                localStorage.setItem('swachham_active_end', completionTime);
+
+                // Lock UI from new tokens
+                tokenPanel.classList.add('busy-lock');
+                tokenInput.placeholder = "MACHINE IN USE";
+                cycleBtns.forEach(b => b.disabled = true); 
+                
+                startTimerLogic(timeMinutes * 60);
             });
         });
 
         document.getElementById('clearLog').addEventListener('click', () => {
             logConsole.innerHTML = '• Log cleared.<br>';
-            if (!isUnlocked) addLog('Please enter your token to begin...');
+            if (!isUnlocked && !localStorage.getItem('swachham_active_end')) {
+                addLog('Please enter your token to begin...');
+            }
         });
     </script>
 </body>
