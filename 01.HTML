@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASHX // LAUNDRY CONTROL</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --panel-bg: #141414;
+            --text-main: #e0e0e0;
+            --text-dim: #777777;
+            --accent: #ffffff;
+            --error: #ff3333;
+            --success: #33ff77;
+            --border: #333333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid var(--border);
+            background-color: var(--bg-color);
+            padding: 30px;
+            box-sizing: border-box;
+            margin-top: 20px;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 10px 0;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 30px;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Input Styling */
+        input[type="text"] {
+            width: 100%;
+            background-color: #000;
+            border: 1px dashed var(--border);
+            color: var(--accent);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 2rem;
+            text-align: center;
+            letter-spacing: 5px;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--text-main);
+        }
+
+        button {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--text-main);
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--text-main);
+            color: var(--bg-color);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(2px);
+        }
+
+        button:disabled {
+            border-color: var(--border);
+            color: var(--text-dim);
+            cursor: not-allowed;
+        }
+
+        /* Locked State for UI */
+        .locked {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* Grid for Cycle Buttons */
+        .cycle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .timer-display {
+            font-size: 2.5rem;
+            text-align: center;
+            color: var(--text-dim);
+            margin-top: 20px;
+            letter-spacing: 2px;
+        }
+
+        /* Log Styling */
+        .log-container {
+            margin-top: 20px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .log-window {
+            height: 150px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            background: #000;
+            padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .log-window .success { color: var(--success); }
+        .log-window .error { color: var(--error); }
+        .log-window .highlight { color: var(--accent); }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>WASH<i>X</i></h1>
+            <p class="subtitle">█ RESTRICTED ACCESS // LAUNDRY CONTROL — AUTHORIZED ONLY</p>
+        </header>
+
+        <div class="section-title">01 // ACCESS TOKEN</div>
+        <div class="panel" id="tokenPanel">
+            <input type="text" id="tokenInput" placeholder="AWAITING TOKEN" maxlength="9">
+            <button id="verifyBtn">▐▌ VERIFY TOKEN</button>
+        </div>
+
+        <div class="section-title">02 // BLUETOOTH</div>
+        <div class="panel locked" id="btPanel">
+            <p style="margin-top: 0; color: var(--text-dim); text-align: center;" id="btStatus">NOT CONNECTED</p>
+            <button id="connectBtn">▐▌ CONNECT TO WASHER</button>
+        </div>
+
+        <div class="section-title">03 // SELECT CYCLE</div>
+        <div class="panel locked" id="cyclePanel">
+            <div class="cycle-grid">
+                <button class="cycleBtn" data-time="25">25 MINUTES</button>
+                <button class="cycleBtn" data-time="40">40 MINUTES</button>
+            </div>
+            <div class="timer-display" id="timerOutput">--:--</div>
+        </div>
+
+        <div class="log-container">
+            <div class="log-header">
+                <div class="section-title" style="margin:0;">█ LOG</div>
+                <div class="section-title" style="margin:0; cursor:pointer;" id="clearLog">CLR</div>
+            </div>
+            <div class="log-window" id="logConsole">
+                > SYSTEM READY<br>
+                > ENTER TOKEN TO BEGIN...<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const tokenInput = document.getElementById('tokenInput');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const btPanel = document.getElementById('btPanel');
+        const cyclePanel = document.getElementById('cyclePanel');
+        const logConsole = document.getElementById('logConsole');
+        const clearLogBtn = document.getElementById('clearLog');
+        const connectBtn = document.getElementById('connectBtn');
+        const btStatus = document.getElementById('btStatus');
+        const cycleBtns = document.querySelectorAll('.cycleBtn');
+        const timerOutput = document.getElementById('timerOutput');
+
+        // State variables
+        let systemUnlocked = false;
+        let washerConnected = false;
+
+        // Auto-format token input to include the hyphen
+        tokenInput.addEventListener('input', function(e) {
+            let val = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            if (val.length > 4) {
+                val = val.substring(0, 4) + '-' + val.substring(4, 8);
+            }
+            e.target.value = val;
+        });
+
+        // Log Function
+        function addLog(message, type = '') {
+            let spanClass = type ? `class="${type}"` : '';
+            logConsole.innerHTML += `> <span ${spanClass}>${message}</span><br>`;
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+
+        // Verify Token Logic
+        verifyBtn.addEventListener('click', () => {
+            if (systemUnlocked) return;
+
+            const token = tokenInput.value;
+            // Regex to check format: 4 alphanumeric, hyphen, 4 alphanumeric (e.g., A1B2-C3D4)
+            const tokenRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+
+            addLog(`VERIFYING TOKEN: ${token}...`);
+
+            setTimeout(() => {
+                if (tokenRegex.test(token)) {
+                    addLog('ACCESS GRANTED. AUTHENTICATION SUCCESSFUL.', 'success');
+                    unlockSystem();
+                } else {
+                    addLog('ACCESS DENIED. INVALID TOKEN FORMAT.', 'error');
+                    tokenInput.value = '';
+                }
+            }, 800); // Fake processing delay
+        });
+
+        // Unlock System
+        function unlockSystem() {
+            systemUnlocked = true;
+            tokenInput.disabled = true;
+            verifyBtn.disabled = true;
+            verifyBtn.innerText = 'SYSTEM UNLOCKED';
+            
+            // Remove lock classes
+            btPanel.classList.remove('locked');
+            addLog('BLUETOOTH MODULE ONLINE.');
+        }
+
+        // Connect Bluetooth
+        connectBtn.addEventListener('click', () => {
+            addLog('SCANNING FOR WASHER...');
+            connectBtn.innerText = 'SCANNING...';
+            
+            setTimeout(() => {
+                washerConnected = true;
+                btStatus.innerText = 'CONNECTED: WASHX-UNIT-01';
+                btStatus.style.color = 'var(--success)';
+                connectBtn.disabled = true;
+                connectBtn.innerText = 'PAIRED';
+                
+                cyclePanel.classList.remove('locked');
+                addLog('WASHER CONNECTED. READY FOR CYCLE SELECTION.', 'success');
+            }, 1200);
+        });
+
+        // Select Cycle
+        cycleBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (!washerConnected) return;
+                
+                const time = e.target.getAttribute('data-time');
+                addLog(`CYCLE SELECTED: <span class="highlight">${time} MINUTES</span>.`);
+                addLog('STARTING WASH CYCLE...', 'success');
+                
+                timerOutput.innerText = `${time}:00`;
+                timerOutput.style.color = 'var(--success)';
+                
+                cycleBtns.forEach(b => b.disabled = true); // Disable buttons while running
+            });
+        });
+
+        // Clear Log
+        clearLogBtn.addEventListener('click', () => {
+            logConsole.innerHTML = '> LOG CLEARED<br>';
+            if (!systemUnlocked) addLog('ENTER TOKEN TO BEGIN...');
+        });
+    </script>
+
+</body>
+</html>

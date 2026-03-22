@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>स्वच्छम्‌ // PRABANDHAK PORTAL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Arya:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --bg-earth: #5C2C26; /* Deep Terracotta */
+            --panel-bg: #3D1C17; /* Darker Earth */
+            --text-cream: #F4E8D1; /* Sand/Cream */
+            --accent-gold: #DDA77B; /* Muted Brass/Gold */
+            --accent-saffron: #D35400;
+        }
+
+        body {
+            background-color: var(--bg-earth);
+            background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png'); /* Subtle rustic texture */
+            color: var(--text-cream);
+            font-family: 'Lora', serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: var(--panel-bg);
+            border: 4px double var(--accent-gold);
+            padding: 30px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-gold);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-family: 'Arya', sans-serif;
+            font-size: 3.5rem;
+            color: var(--accent-gold);
+            margin: 0 0 5px 0;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            margin: 0;
+            letter-spacing: 1px;
+            color: var(--text-cream);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--accent-gold);
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: "❖ ";
+            margin-right: 8px;
+        }
+
+        .panel {
+            border: 1px solid var(--accent-gold);
+            padding: 20px;
+            margin-bottom: 30px;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        .token-display {
+            font-size: 2.8rem;
+            text-align: center;
+            letter-spacing: 6px;
+            color: var(--text-cream);
+            padding: 20px 10px;
+            border: 2px dashed var(--accent-gold);
+            margin-bottom: 20px;
+            font-weight: bold;
+            min-height: 50px;
+        }
+
+        button {
+            background-color: var(--accent-saffron);
+            color: var(--text-cream);
+            border: 2px solid var(--accent-gold);
+            padding: 15px;
+            font-family: 'Lora', serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 0px var(--accent-gold);
+        }
+
+        button:hover {
+            background-color: var(--accent-gold);
+            color: var(--panel-bg);
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px #000;
+        }
+
+        .log-window {
+            height: 120px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--accent-gold);
+        }
+
+        .log-window span { color: var(--accent-gold); font-weight: bold; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--panel-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--accent-gold); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>स्वच्छम्‌</h1>
+            <p class="subtitle">प्रबन्धक कक्ष // MANAGER PORTAL</p>
+        </header>
+
+        <div class="section-title">मुद्रा उत्पन्न करें // GENERATE ACCESS TOKEN</div>
+        <div class="panel">
+            <div class="token-display" id="tokenOutput">****-****</div>
+            <button id="generateBtn">ISSUE NEW TOKEN</button>
+        </div>
+
+        <div class="section-title" style="justify-content: space-between;">
+            <span>पंजीका // SYSTEM LOG</span>
+            <span style="cursor:pointer; font-size: 0.9rem;" id="clearLog">CLEAR</span>
+        </div>
+        <div class="log-window" id="logConsole">
+            • प्रणाली तैयार है (System Ready)<br>
+            • Waiting for manager action...<br>
+        </div>
+    </div>
+
+    <script>
+        const generateBtn = document.getElementById('generateBtn');
+        const tokenOutput = document.getElementById('tokenOutput');
+        const logConsole = document.getElementById('logConsole');
+        const clearLogBtn = document.getElementById('clearLog');
+
+        function generateRandomToken() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let token = '';
+            for (let i = 0; i < 8; i++) {
+                if (i === 4) token += '-';
+                token += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return token;
+        }
+
+        function addLog(msg) {
+            logConsole.innerHTML += `• ${msg}<br>`;
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }
+
+        generateBtn.addEventListener('click', () => {
+            addLog('Generating secure token...');
+            setTimeout(() => {
+                const newToken = generateRandomToken();
+                tokenOutput.innerText = newToken;
+                addLog(`Success: Token <span>${newToken}</span> issued.`);
+            }, 500);
+        });
+
+        clearLogBtn.addEventListener('click', () => {
+            logConsole.innerHTML = '• Log cleared.<br>• प्रणाली तैयार है (System Ready)<br>';
+        });
+    </script>
+</body>
+</html>
