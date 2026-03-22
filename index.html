@@ -229,6 +229,7 @@
         let isConnected = false;
         let totalSeconds = 0;
         let cycleTimerInterval = null;
+        let bluetoothDevice = null;
 
         const IDLE_TIMEOUT = 12 * 60 * 1000; 
         let idleTimer;
@@ -249,6 +250,16 @@
             
             btPanel.classList.add('locked');
             cyclePanel.classList.add('locked');
+            
+            // Disconnect Bluetooth if session expires
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+                isConnected = false;
+                btStatus.innerText = 'NOT CONNECTED';
+                btStatus.style.color = 'var(--text-dark)';
+                connectBtn.disabled = false;
+                connectBtn.innerText = 'CONNECT TO WASHER';
+            }
             
             addLog('12 मिनट की निष्क्रियता। (12 min idle.)', 'error');
             addLog('सत्र समाप्त। कृपया मुद्रा पुनः दर्ज करें। (Session expired. Re-enter token.)', 'error');
@@ -278,7 +289,6 @@
 
             addLog(`Verifying token...`);
             setTimeout(() => {
-                // THE SECRET ALGORITHM VERIFICATION
                 const isFormatCorrect = tokenRegex.test(token);
                 const isAlgorithmCorrect = token.charAt(3) === token.charAt(5);
 
@@ -300,19 +310,57 @@
             }, 600);
         });
 
-        connectBtn.addEventListener('click', () => {
-            addLog('Searching for Swachham Unit...');
-            connectBtn.innerText = 'SCANNING...';
-            setTimeout(() => {
+        // --- REAL BLUETOOTH INTEGRATION ---
+        connectBtn.addEventListener('click', async () => {
+            // Check if the browser supports Web Bluetooth
+            if (!navigator.bluetooth) {
+                addLog('Your browser does not support Web Bluetooth.', 'error');
+                return;
+            }
+
+            addLog('Requesting Bluetooth permissions...');
+            connectBtn.innerText = 'SCANNING AREA...';
+
+            try {
+                // This triggers the native browser popup to select a device
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true, // Scans for ANY available Bluetooth device nearby
+                    optionalServices: ['generic_access'] 
+                });
+
+                addLog(`Pairing with: ${bluetoothDevice.name || 'Unknown Device'}`, 'success');
+                
+                // Set up a listener in case the device disconnects manually or moves out of range
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                // Update UI state
                 isConnected = true;
-                btStatus.innerText = 'CONNECTED: SWACHHAM-01';
+                const deviceName = bluetoothDevice.name ? bluetoothDevice.name.toUpperCase() : 'UNKNOWN UNIT';
+                btStatus.innerText = `CONNECTED: ${deviceName}`;
                 btStatus.style.color = 'var(--accent-green)';
                 connectBtn.disabled = true;
                 connectBtn.innerText = 'PAIRED';
                 cyclePanel.classList.remove('locked');
+                
                 addLog('Washer connected successfully.', 'success');
-            }, 1000);
+
+            } catch (error) {
+                // If the user hits "Cancel" on the popup, or Bluetooth is off
+                addLog(`Bluetooth connection failed: ${error.message}`, 'error');
+                connectBtn.innerText = 'CONNECT TO WASHER';
+            }
         });
+
+        function onDisconnected() {
+            addLog('Device disconnected. (संपर्क टूट गया)', 'error');
+            isConnected = false;
+            btStatus.innerText = 'NOT CONNECTED';
+            btStatus.style.color = 'var(--text-dark)';
+            connectBtn.disabled = false;
+            connectBtn.innerText = 'CONNECT TO WASHER';
+            cyclePanel.classList.add('locked');
+        }
+        // -----------------------------------
 
         function startCycle(minutes) {
             totalSeconds = minutes * 60;
