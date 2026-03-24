@@ -27,11 +27,7 @@
             box-sizing: border-box; box-shadow: 0 15px 40px rgba(0,0,0,0.6); position: relative;
         }
 
-        .container::before {
-            content: '❖'; position: absolute; top: 10px; left: 50%;
-            transform: translateX(-50%); color: var(--accent-gold); font-size: 1.5rem;
-        }
-
+        .container::before { content: '❖'; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: var(--accent-gold); font-size: 1.5rem; }
         header { text-align: center; border-bottom: 2px solid var(--accent-gold); padding-bottom: 20px; margin-bottom: 30px; }
         h1 { font-family: 'Arya', sans-serif; font-size: 3.5rem; color: var(--accent-gold); margin: 0 0 5px 0; font-weight: 700; }
         .subtitle { font-size: 1.1rem; margin: 0; color: var(--text-cream); }
@@ -102,7 +98,6 @@
             const mirrorChar = chars.charAt(Math.floor(Math.random() * chars.length));
             const newToken = `${part1}${mirrorChar}-${mirrorChar}${part2}`;
             
-            // Save to LocalStorage for Client to read
             let activeTokens = JSON.parse(localStorage.getItem('swachham_tokens') || '[]');
             activeTokens.push(newToken);
             localStorage.setItem('swachham_tokens', JSON.stringify(activeTokens));
