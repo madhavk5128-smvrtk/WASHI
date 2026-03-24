@@ -140,7 +140,7 @@
 
         // --- HARDWARE CONFIGURATION (Discovered via Wireshark) ---
         const BLE_SERVICE_UUID = '0000fe60-0000-1000-8000-00805f9b34fb';
-        const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; // Write Channel
+        const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; // Write Command Channel
         const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; // Handshake Channel
         
         let isUnlocked = false; let isConnected = false;
@@ -210,7 +210,7 @@
             logConsole.scrollTop = logConsole.scrollHeight;
         }
 
-        // Token Verification
+        // Token Verification (Reads from Manager Portal)
         verifyBtn.addEventListener('click', () => {
             if (isUnlocked) return;
             const token = tokenInput.value;
@@ -246,6 +246,7 @@
             if (!navigator.bluetooth) { addLog('Web Bluetooth not supported on this browser.', 'error'); return; }
             addLog('Requesting Bluetooth permissions...'); connectBtn.innerText = 'SCANNING...';
             try {
+                // 1. Connect to specific device MAC / Prefix
                 bluetoothDevice = await navigator.bluetooth.requestDevice({ 
                     filters: [{ namePrefix: "U-AC" }], 
                     optionalServices: [BLE_SERVICE_UUID] 
@@ -257,10 +258,12 @@
                 const server = await bluetoothDevice.gatt.connect();
                 addLog('GATT Server connected. Discovering services...', 'hw');
                 
+                // 2. Discover the target services mapped from Wireshark
                 const service = await server.getPrimaryService(BLE_SERVICE_UUID);
                 cmdCharacteristic = await service.getCharacteristic(BLE_CMD_CHAR);
                 authCharacteristic = await service.getCharacteristic(BLE_AUTH_CHAR);
                 
+                // 3. Send the Static Handshake array captured at 23:51:24
                 addLog('Initiating A3 hardware handshake...', 'hw');
                 const handshakePayload = new Uint8Array([0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
                 await authCharacteristic.writeValueWithoutResponse(handshakePayload);
@@ -313,15 +316,15 @@
 
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                // THE BUSY LOCKOUT: Terminate execution immediately if memory shows machine is active
+                // Check if machine is already busy in memory
                 const activeEnd = localStorage.getItem('swachham_active_end');
                 if (activeEnd) {
                     const remainingMs = parseInt(activeEnd) - Date.now();
                     if (remainingMs > 0) {
                         addLog('CRITICAL: Machine is currently busy. Timer start aborted.', 'error');
-                        return; // Physical code termination, timer cannot start
+                        return; 
                     } else {
-                        localStorage.removeItem('swachham_active_end'); // Clear stale memory
+                        localStorage.removeItem('swachham_active_end'); 
                     }
                 }
 
@@ -330,6 +333,7 @@
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
                 
                 try {
+                    // Inject the validated static hex code matching the cycle duration
                     let timeHex = 0x06; 
                     if (timeMinutes === 25) timeHex = 0x19; 
                     if (timeMinutes === 40) timeHex = 0x28; 
@@ -337,5 +341,32 @@
                     const cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, timeHex, 0xAA]);
                     addLog(`Sending command payload: 5A 14 02 12 ${timeHex.toString(16).toUpperCase().padStart(2, '0')} AA`, 'hw');
                     
+                    // Fire the replay command directly to FE61
                     await cmdCharacteristic.writeValueWithoutResponse(cyclePayload);
-                    addLog(`${timeMinutes === 6 ? "Drying" : "Wash
+                    addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started: ${timeMinutes} Minutes.`, 'success');
+                    
+                    // Lock the system down for the duration of the cycle
+                    const completionTime = Date.now() + (timeMinutes * 60 * 1000);
+                    localStorage.setItem('swachham_active_end', completionTime);
+
+                    tokenPanel.classList.add('busy-lock');
+                    tokenInput.placeholder = "MACHINE IN USE";
+                    cycleBtns.forEach(b => b.disabled = true); 
+                    
+                    startTimerLogic(timeMinutes * 60);
+
+                } catch (error) {
+                    addLog(`Failed to write to hardware: ${error.message}`, 'error');
+                }
+            });
+        });
+
+        document.getElementById('clearLog').addEventListener('click', () => {
+            logConsole.innerHTML = '• Log cleared.<br>';
+            if (!isUnlocked && !localStorage.getItem('swachham_active_end')) {
+                addLog('Please enter your token to begin...');
+            }
+        });
+    </script>
+</body>
+</html>
