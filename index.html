@@ -51,6 +51,9 @@
         button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0px 0px 0px transparent; }
         button:disabled { background-color: #D7CCC8; border-color: #D7CCC8; color: #8D6E63; box-shadow: none; cursor: not-allowed; }
 
+        .btn-stop { background-color: #3E2723; border-color: #3E2723; grid-column: span 3; margin-top: 10px; display: none; }
+        .btn-stop:hover:not(:disabled) { background-color: #D32F2F; border-color: #D32F2F;}
+
         .locked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
         .busy-lock { opacity: 0.6; pointer-events: none; }
 
@@ -101,6 +104,7 @@
                 <button class="cycleBtn" data-time="25">शीघ्र // 25 MIN</button>
                 <button class="cycleBtn" data-time="40">पूर्ण // 40 MIN</button>
                 <button class="cycleBtn" data-time="6">शुष्क // 6 MIN</button>
+                <button class="btn-stop" id="stopCycleBtn">🛑 STOP CYCLE / RESET</button>
             </div>
             
             <div class="clock-container">
@@ -134,14 +138,15 @@
         const connectBtn = document.getElementById('connectBtn');
         const btStatus = document.getElementById('btStatus');
         const cycleBtns = document.querySelectorAll('.cycleBtn');
+        const stopCycleBtn = document.getElementById('stopCycleBtn');
         const timerOutput = document.getElementById('timerOutput');
         const minHand = document.getElementById('minHand');
         const secHand = document.getElementById('secHand');
 
-        // --- HARDWARE CONFIGURATION (Discovered via Wireshark) ---
+        // --- HARDWARE UUIDS ---
         const BLE_SERVICE_UUID = '0000fe60-0000-1000-8000-00805f9b34fb';
-        const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; // Write Command Channel
-        const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; // Handshake Channel
+        const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; 
+        const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; 
         
         let isUnlocked = false; let isConnected = false;
         let totalSeconds = 0; let cycleTimerInterval = null; 
@@ -162,6 +167,7 @@
                     btPanel.classList.add('locked');
                     cyclePanel.classList.remove('locked');
                     cycleBtns.forEach(b => b.disabled = true);
+                    stopCycleBtn.style.display = 'block';
                     startTimerLogic(Math.ceil(remainingMs / 1000));
                 } else {
                     localStorage.removeItem('swachham_active_end');
@@ -169,7 +175,7 @@
             }
         });
 
-        // Auto Logout
+        // --- AUTO LOGOUT ---
         const IDLE_TIMEOUT = 12 * 60 * 1000; let idleTimer;
         function resetIdleTimer() { 
             clearTimeout(idleTimer); 
@@ -185,6 +191,7 @@
             tokenInput.disabled = false; tokenInput.value = ''; tokenInput.placeholder = "ENTER TOKEN";
             verifyBtn.disabled = false; verifyBtn.innerText = 'सत्यापित करें // VERIFY';
             btPanel.classList.add('locked'); cyclePanel.classList.add('locked');
+            stopCycleBtn.style.display = 'none';
             
             if (bluetoothDevice && bluetoothDevice.gatt.connected) {
                 bluetoothDevice.gatt.disconnect();
@@ -210,7 +217,7 @@
             logConsole.scrollTop = logConsole.scrollHeight;
         }
 
-        // Token Verification (Reads from Manager Portal)
+        // --- TOKEN VERIFICATION ---
         verifyBtn.addEventListener('click', () => {
             if (isUnlocked) return;
             const token = tokenInput.value;
@@ -241,12 +248,11 @@
             }, 600);
         });
 
-        // --- HARDWARE CONNECTION & HANDSHAKE ---
+        // --- BLUETOOTH CONNECTION & HANDSHAKE ---
         connectBtn.addEventListener('click', async () => {
             if (!navigator.bluetooth) { addLog('Web Bluetooth not supported on this browser.', 'error'); return; }
             addLog('Requesting Bluetooth permissions...'); connectBtn.innerText = 'SCANNING...';
             try {
-                // 1. Connect to specific device MAC / Prefix
                 bluetoothDevice = await navigator.bluetooth.requestDevice({ 
                     filters: [{ namePrefix: "U-AC" }], 
                     optionalServices: [BLE_SERVICE_UUID] 
@@ -258,12 +264,10 @@
                 const server = await bluetoothDevice.gatt.connect();
                 addLog('GATT Server connected. Discovering services...', 'hw');
                 
-                // 2. Discover the target services mapped from Wireshark
                 const service = await server.getPrimaryService(BLE_SERVICE_UUID);
                 cmdCharacteristic = await service.getCharacteristic(BLE_CMD_CHAR);
                 authCharacteristic = await service.getCharacteristic(BLE_AUTH_CHAR);
                 
-                // 3. Send the Static Handshake array captured at 23:51:24
                 addLog('Initiating A3 hardware handshake...', 'hw');
                 const handshakePayload = new Uint8Array([0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
                 await authCharacteristic.writeValueWithoutResponse(handshakePayload);
@@ -288,19 +292,34 @@
             connectBtn.innerText = 'CONNECT TO WASHER'; cyclePanel.classList.add('locked');
         }
 
-        // --- TIMER LOGIC ---
+        // --- UI TIMER ABORT LOGIC ---
+        function abortCycleUI() {
+            clearInterval(cycleTimerInterval);
+            totalSeconds = 0;
+            timerOutput.innerText = `--:--`;
+            secHand.style.transform = `translateX(-50%) rotate(0deg)`;
+            minHand.style.transform = `translateX(-50%) rotate(0deg)`;
+            cycleBtns.forEach(b => b.disabled = false);
+            localStorage.removeItem('swachham_active_end');
+            lockSystem(); 
+        }
+
         function startTimerLogic(secondsRemaining) {
             totalSeconds = secondsRemaining; 
             clearInterval(cycleTimerInterval); 
             updateClockUI(); 
             
             cycleTimerInterval = setInterval(() => {
+                // Listen for Manager Emergency Reset
+                if (!localStorage.getItem('swachham_active_end')) {
+                    addLog('Cycle forcibly aborted by Manager Override.', 'error');
+                    abortCycleUI();
+                    return;
+                }
+
                 if (totalSeconds <= 0) {
-                    clearInterval(cycleTimerInterval); 
-                    localStorage.removeItem('swachham_active_end'); 
                     addLog('Cycle Complete! (चक्र पूर्ण)', 'success');
-                    cycleBtns.forEach(b => b.disabled = false); 
-                    lockSystem(); 
+                    abortCycleUI();
                     return;
                 }
                 totalSeconds--; updateClockUI();
@@ -314,18 +333,14 @@
             minHand.style.transform = `translateX(-50%) rotate(${(m * 6) + (s * 0.1)}deg)`;
         }
 
+        // --- CORE HARDWARE WRITE SEQUENCE (THE EXPLOIT) ---
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                // Check if machine is already busy in memory
                 const activeEnd = localStorage.getItem('swachham_active_end');
                 if (activeEnd) {
                     const remainingMs = parseInt(activeEnd) - Date.now();
-                    if (remainingMs > 0) {
-                        addLog('CRITICAL: Machine is currently busy. Timer start aborted.', 'error');
-                        return; 
-                    } else {
-                        localStorage.removeItem('swachham_active_end'); 
-                    }
+                    if (remainingMs > 0) return; 
+                    else localStorage.removeItem('swachham_active_end'); 
                 }
 
                 if (!isConnected) return;
@@ -333,25 +348,34 @@
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
                 
                 try {
-                    // Inject the validated static hex code matching the cycle duration
+                    // Step 1: Send the Wake-Up Ping
+                    const pingPayload = new Uint8Array([0x04, 0x06, 0x5C, 0x01, 0x01, 0x02, 0x00, 0x00]);
+                    addLog('Sending Wake-Up Ping: 04 06 5C 01 01 02 00 00', 'hw');
+                    await cmdCharacteristic.writeValueWithoutResponse(pingPayload);
+
+                    // Step 2: Wait 400 milliseconds (Mimicking the official app's delay)
+                    addLog('Awaiting motherboard hardware response...', 'hw');
+                    await new Promise(resolve => setTimeout(resolve, 400));
+
+                    // Step 3: Map the Time and Send the Command Payload
                     let timeHex = 0x06; 
                     if (timeMinutes === 25) timeHex = 0x19; 
                     if (timeMinutes === 40) timeHex = 0x28; 
                     
                     const cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, timeHex, 0xAA]);
-                    addLog(`Sending command payload: 5A 14 02 12 ${timeHex.toString(16).toUpperCase().padStart(2, '0')} AA`, 'hw');
+                    addLog(`Sending Start Command: 5A 14 02 12 ${timeHex.toString(16).toUpperCase().padStart(2, '0')} AA`, 'hw');
                     
-                    // Fire the replay command directly to FE61
                     await cmdCharacteristic.writeValueWithoutResponse(cyclePayload);
-                    addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started: ${timeMinutes} Minutes.`, 'success');
+                    addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started. Motor engaged.`, 'success');
                     
-                    // Lock the system down for the duration of the cycle
+                    // UI Lockout
                     const completionTime = Date.now() + (timeMinutes * 60 * 1000);
                     localStorage.setItem('swachham_active_end', completionTime);
 
                     tokenPanel.classList.add('busy-lock');
                     tokenInput.placeholder = "MACHINE IN USE";
                     cycleBtns.forEach(b => b.disabled = true); 
+                    stopCycleBtn.style.display = 'block'; 
                     
                     startTimerLogic(timeMinutes * 60);
 
@@ -359,6 +383,24 @@
                     addLog(`Failed to write to hardware: ${error.message}`, 'error');
                 }
             });
+        });
+
+        // --- HARDWARE ABORT BUTTON ---
+        stopCycleBtn.addEventListener('click', async () => {
+            addLog('ABORT INITIATED. Attempting zero-time override...', 'error');
+            
+            try {
+                if (isConnected && cmdCharacteristic) {
+                    const stopPayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, 0x00, 0xAA]);
+                    await cmdCharacteristic.writeValueWithoutResponse(stopPayload);
+                    addLog('Zero-time payload sent.', 'hw');
+                    bluetoothDevice.gatt.disconnect();
+                }
+            } catch (err) {
+                addLog('Could not send hardware override.', 'error');
+            }
+
+            abortCycleUI();
         });
 
         document.getElementById('clearLog').addEventListener('click', () => {
