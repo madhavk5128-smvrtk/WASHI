@@ -9,7 +9,7 @@
 
         :root {
             --bg-earth: #5C2C26; --panel-bg: #3D1C17; --text-cream: #F4E8D1; 
-            --accent-gold: #DDA77B; --accent-saffron: #D35400;
+            --accent-gold: #DDA77B; --accent-saffron: #D35400; --accent-red: #D32F2F;
         }
 
         body {
@@ -45,15 +45,18 @@
         button {
             background-color: var(--accent-saffron); color: var(--text-cream); border: 2px solid var(--accent-gold); 
             padding: 15px; font-family: 'Lora', serif; font-size: 1.2rem; font-weight: bold; width: 100%; 
-            cursor: pointer; transition: all 0.3s ease; box-shadow: 2px 2px 0px var(--accent-gold); border-radius: 4px;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 2px 2px 0px var(--accent-gold); border-radius: 4px; margin-bottom: 10px;
         }
         button:hover:not(:disabled) { background-color: var(--accent-gold); color: var(--panel-bg); box-shadow: 4px 4px 0px #000; }
         button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
         button:disabled { background-color: #6D4C41; border-color: #5D4037; color: #8D6E63; cursor: not-allowed; box-shadow: none; }
 
+        .btn-danger { background-color: transparent; border-color: var(--accent-red); color: var(--accent-red); font-size: 1rem;}
+        .btn-danger:hover:not(:disabled) { background-color: var(--accent-red); color: white; border-color: var(--accent-red);}
+
         .log-window { height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--accent-gold); border-radius: 4px; }
         .log-window span { color: var(--accent-gold); font-weight: bold; }
-        .log-window .warning { color: var(--accent-saffron); font-style: italic;}
+        .log-window .warning { color: var(--accent-red); font-weight: bold;}
 
         #machineStatus { text-align: center; font-family: 'Arya', sans-serif; font-size: 1.5rem; letter-spacing: 2px; margin-bottom: 15px; }
 
@@ -75,6 +78,7 @@
             <div id="machineStatus">STATUS: <span style="color: #4CAF50;">AVAILABLE</span></div>
             <div class="token-display" id="tokenOutput">****-****</div>
             <button id="generateBtn">ISSUE NEW TOKEN</button>
+            <button id="resetSystemBtn" class="btn-danger">EMERGENCY RESET</button>
         </div>
 
         <div class="section-title" style="justify-content: space-between;">
@@ -89,6 +93,7 @@
 
     <script>
         const generateBtn = document.getElementById('generateBtn');
+        const resetSystemBtn = document.getElementById('resetSystemBtn');
         const tokenOutput = document.getElementById('tokenOutput');
         const logConsole = document.getElementById('logConsole');
         const clearLogBtn = document.getElementById('clearLog');
@@ -107,7 +112,7 @@
                     generateBtn.innerText = "MACHINE IN USE";
                     return;
                 } else {
-                    localStorage.removeItem('swachham_active_end'); // Clear if timer expired while closed
+                    localStorage.removeItem('swachham_active_end'); 
                 }
             }
             machineStatus.innerHTML = `STATUS: <span style="color: #4CAF50;">AVAILABLE</span>`;
@@ -115,7 +120,6 @@
             generateBtn.innerText = "ISSUE NEW TOKEN";
         }
 
-        // Run the checker every second
         setInterval(checkMachineAvailability, 1000);
         checkMachineAvailability();
 
@@ -142,13 +146,22 @@
         }
 
         generateBtn.addEventListener('click', () => {
-            if (generateBtn.disabled) return; // Failsafe
+            if (generateBtn.disabled) return; 
             addLog('Generating secure single-use token...');
             setTimeout(() => {
                 const newToken = generateRandomToken();
                 tokenOutput.innerText = newToken;
                 addLog(`Success: Token <span>${newToken}</span> issued and saved.`);
             }, 500);
+        });
+
+        // --- EMERGENCY RESET LOGIC ---
+        resetSystemBtn.addEventListener('click', () => {
+            if(confirm("Force reset the machine? This will kill the active timer on the client portal.")) {
+                localStorage.removeItem('swachham_active_end');
+                addLog('EMERGENCY RESET TRIGGERED. Client terminal unlocked.', 'warning');
+                checkMachineAvailability();
+            }
         });
 
         clearLogBtn.addEventListener('click', () => {
