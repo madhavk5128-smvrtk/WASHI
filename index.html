@@ -52,7 +52,7 @@
         button:disabled { background-color: #D7CCC8; border-color: #D7CCC8; color: #8D6E63; box-shadow: none; cursor: not-allowed; }
 
         .locked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
-        .busy-lock { opacity: 0.6; pointer-events: none; } /* Specific class for when machine is running */
+        .busy-lock { opacity: 0.6; pointer-events: none; }
 
         .cycle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .clock-container { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 30px; }
@@ -68,6 +68,7 @@
 
         .log-window { height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.6; padding: 10px; background: #FFF; border: 1px inset var(--border-color); border-radius: 4px; }
         .log-window .success { color: var(--accent-green); font-weight: bold;} .log-window .error { color: #D32F2F; font-weight: bold;}
+        .log-window .hw { color: #1976D2; font-family: monospace; font-size: 0.85rem;}
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-sand); }
@@ -133,13 +134,22 @@
         const connectBtn = document.getElementById('connectBtn');
         const btStatus = document.getElementById('btStatus');
         const cycleBtns = document.querySelectorAll('.cycleBtn');
-        
         const timerOutput = document.getElementById('timerOutput');
         const minHand = document.getElementById('minHand');
         const secHand = document.getElementById('secHand');
 
+        // --- HARDWARE CONFIGURATION (Discovered via Wireshark) ---
+        const BLE_SERVICE_UUID = '0000fe60-0000-1000-8000-00805f9b34fb';
+        const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; // Write Channel
+        const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; // Handshake Channel
+        
         let isUnlocked = false; let isConnected = false;
-        let totalSeconds = 0; let cycleTimerInterval = null; let bluetoothDevice = null;
+        let totalSeconds = 0; let cycleTimerInterval = null; 
+        
+        // BLE Objects
+        let bluetoothDevice = null;
+        let cmdCharacteristic = null;
+        let authCharacteristic = null;
 
         // --- ON LOAD: CHECK IF A CYCLE IS CURRENTLY RUNNING ---
         window.addEventListener('load', () => {
@@ -147,27 +157,23 @@
             if (savedEndTime) {
                 const remainingMs = parseInt(savedEndTime) - Date.now();
                 if (remainingMs > 0) {
-                    // Machine is busy! Lock the UI and resume the timer.
                     addLog('Machine is currently BUSY. Please wait.', 'error');
                     tokenInput.placeholder = "MACHINE IN USE";
                     tokenPanel.classList.add('busy-lock');
                     btPanel.classList.add('locked');
                     cyclePanel.classList.remove('locked');
                     cycleBtns.forEach(b => b.disabled = true);
-                    
                     startTimerLogic(Math.ceil(remainingMs / 1000));
                 } else {
-                    // Previous cycle finished while the browser was closed. Clean up.
                     localStorage.removeItem('swachham_active_end');
                 }
             }
         });
 
-        // Auto Logout (Only triggers if the machine IS NOT running)
+        // Auto Logout
         const IDLE_TIMEOUT = 12 * 60 * 1000; let idleTimer;
         function resetIdleTimer() { 
             clearTimeout(idleTimer); 
-            // Don't auto-logout if the machine is actively washing
             if (!localStorage.getItem('swachham_active_end')) {
                 idleTimer = setTimeout(lockSystem, IDLE_TIMEOUT); 
             }
@@ -236,27 +242,45 @@
             }, 600);
         });
 
-        // Web Bluetooth Connection
+        // --- HARDWARE CONNECTION & HANDSHAKE ---
         connectBtn.addEventListener('click', async () => {
             if (!navigator.bluetooth) { addLog('Web Bluetooth not supported on this browser.', 'error'); return; }
             addLog('Requesting Bluetooth permissions...'); connectBtn.innerText = 'SCANNING...';
             try {
+                // 1. Connect to Device
                 bluetoothDevice = await navigator.bluetooth.requestDevice({ 
-                    acceptAllDevices: true, 
-                    optionalServices: ['generic_access', '0000fe60-0000-1000-8000-00805f9b34fb'] 
+                    filters: [{ namePrefix: "U-AC" }], // Targets U-AC-524661
+                    optionalServices: [BLE_SERVICE_UUID] 
                 });
                 
-                addLog(`Pairing with: ${bluetoothDevice.name || 'Unknown Device'}`, 'success');
+                addLog(`Pairing with: ${bluetoothDevice.name}`, 'success');
                 bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
+                const server = await bluetoothDevice.gatt.connect();
+                addLog('GATT Server connected. Discovering services...', 'hw');
+                
+                // 2. Discover Services & Characteristics
+                const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+                cmdCharacteristic = await service.getCharacteristic(BLE_CMD_CHAR);
+                authCharacteristic = await service.getCharacteristic(BLE_AUTH_CHAR);
+                
+                addLog('Target characteristics resolved (FE61, FE63).', 'hw');
+
+                // 3. Perform Handshake (Packet 18445 logic)
+                addLog('Initiating A3 hardware handshake...', 'hw');
+                const handshakePayload = new Uint8Array([0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+                await authCharacteristic.writeValueWithoutResponse(handshakePayload);
+                addLog('Handshake payload sent to FE63.', 'success');
+
+                // Unlock UI
                 isConnected = true;
-                btStatus.innerText = `CONNECTED: ${bluetoothDevice.name ? bluetoothDevice.name.toUpperCase() : 'UNKNOWN UNIT'}`;
+                btStatus.innerText = `CONNECTED: ${bluetoothDevice.name.toUpperCase()}`;
                 btStatus.style.color = 'var(--accent-green)';
-                connectBtn.disabled = true; connectBtn.innerText = 'PAIRED';
+                connectBtn.disabled = true; connectBtn.innerText = 'PAIRED & AUTHENTICATED';
                 cyclePanel.classList.remove('locked');
-                addLog('Washer connected successfully.', 'success');
+                
             } catch (error) {
-                addLog(`Bluetooth connection failed: ${error.message}`, 'error');
+                addLog(`BLE Error: ${error.message}`, 'error');
                 connectBtn.innerText = 'CONNECT TO WASHER';
             }
         });
@@ -268,7 +292,7 @@
             connectBtn.innerText = 'CONNECT TO WASHER'; cyclePanel.classList.add('locked');
         }
 
-        // --- TIMER AND LOCKOUT LOGIC ---
+        // --- TIMER & HARDWARE WRITE LOGIC ---
         function startTimerLogic(secondsRemaining) {
             totalSeconds = secondsRemaining; 
             clearInterval(cycleTimerInterval); 
@@ -277,10 +301,10 @@
             cycleTimerInterval = setInterval(() => {
                 if (totalSeconds <= 0) {
                     clearInterval(cycleTimerInterval); 
-                    localStorage.removeItem('swachham_active_end'); // Clear the lock
+                    localStorage.removeItem('swachham_active_end'); 
                     addLog('Cycle Complete! (चक्र पूर्ण)', 'success');
                     cycleBtns.forEach(b => b.disabled = false); 
-                    lockSystem(); // Immediately lock the system to require a new token for the next person
+                    lockSystem(); 
                     return;
                 }
                 totalSeconds--; updateClockUI();
@@ -295,22 +319,40 @@
         }
 
         cycleBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 if (!isConnected && !localStorage.getItem('swachham_active_end')) return;
                 
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
-                addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started: ${timeMinutes} Minutes.`, 'success');
                 
-                // SAVE THE EXPECTED COMPLETION TIME TO PREVENT DOUBLE BOOKING
-                const completionTime = Date.now() + (timeMinutes * 60 * 1000);
-                localStorage.setItem('swachham_active_end', completionTime);
+                try {
+                    // 1. Calculate the Dynamic Hardware Payload
+                    // Format: 5A 14 02 12 [TIME_HEX] AA
+                    let timeHex = 0x06; // Default Dry
+                    if (timeMinutes === 25) timeHex = 0x19; // 25 in Hex
+                    if (timeMinutes === 40) timeHex = 0x28; // 40 in Hex
+                    
+                    const cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, timeHex, 0xAA]);
+                    
+                    addLog(`Sending command payload: 5A 14 02 12 ${timeHex.toString(16).toUpperCase().padStart(2, '0')} AA`, 'hw');
+                    
+                    // 2. Write to FE61
+                    await cmdCharacteristic.writeValueWithoutResponse(cyclePayload);
+                    
+                    addLog(`${timeMinutes === 6 ? "Drying" : "Wash"} Cycle started: ${timeMinutes} Minutes.`, 'success');
+                    
+                    // 3. Lock UI & Start Timer
+                    const completionTime = Date.now() + (timeMinutes * 60 * 1000);
+                    localStorage.setItem('swachham_active_end', completionTime);
 
-                // Lock UI from new tokens
-                tokenPanel.classList.add('busy-lock');
-                tokenInput.placeholder = "MACHINE IN USE";
-                cycleBtns.forEach(b => b.disabled = true); 
-                
-                startTimerLogic(timeMinutes * 60);
+                    tokenPanel.classList.add('busy-lock');
+                    tokenInput.placeholder = "MACHINE IN USE";
+                    cycleBtns.forEach(b => b.disabled = true); 
+                    
+                    startTimerLogic(timeMinutes * 60);
+
+                } catch (error) {
+                    addLog(`Failed to write to hardware: ${error.message}`, 'error');
+                }
             });
         });
 
