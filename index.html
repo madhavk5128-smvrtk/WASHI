@@ -54,7 +54,7 @@
         .locked { opacity: 0.3; pointer-events: none; filter: grayscale(100%); }
         .busy-lock { opacity: 0.6; pointer-events: none; }
 
-        .cycle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .cycle-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         .clock-container { display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 30px; }
 
         .analog-clock { width: 120px; height: 120px; border: 4px solid var(--border-color); border-radius: 50%; position: relative; background: var(--panel-bg); box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
@@ -97,9 +97,9 @@
         <div class="section-title">चक्र चुनें // SELECT CYCLE</div>
         <div class="panel locked" id="cyclePanel">
             <div class="cycle-grid">
-                <button class="cycleBtn" data-time="15">Express 15'</button>
-                <button class="cycleBtn" data-time="54">Mix 20°</button>
-                <button class="cycleBtn" data-time="46">Cotton</button>
+                <button class="cycleBtn" data-time="40">Normal 40mins</button>
+                <button class="cycleBtn" data-time="25">Quick 25mins</button>
+                <button class="cycleBtn" data-time="6">Spin 6mins</button>
             </div>
             
             <div class="clock-container">
@@ -137,6 +137,7 @@
         const minHand = document.getElementById('minHand');
         const secHand = document.getElementById('secHand');
 
+        // --- HARDWARE UUIDS ---
         const BLE_SERVICE_UUID = '0000fe60-0000-1000-8000-00805f9b34fb';
         const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; 
         const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; 
@@ -312,7 +313,7 @@
             minHand.style.transform = `translateX(-50%) rotate(${(m * 6) + (s * 0.1)}deg)`;
         }
 
-        // --- THE FINAL 20-BYTE COMMAND LOGIC ---
+        // --- THE FLAWLESS 6-BYTE APP PAYLOAD ---
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const activeEnd = localStorage.getItem('swachham_active_end');
@@ -327,7 +328,7 @@
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
                 
                 try {
-                    // Step 1: Send the Wake-Up Ping
+                    // Step 1: Send the Wake-Up Ping (Crucial for motor engagement)
                     const pingPayload = new Uint8Array([0x04, 0x06, 0x5C, 0x01, 0x01, 0x02, 0x00, 0x00]);
                     addLog('Waking up machine...');
                     await cmdCharacteristic.writeValueWithoutResponse(pingPayload);
@@ -335,43 +336,17 @@
                     // Step 2: Wait 400 milliseconds
                     await new Promise(resolve => setTimeout(resolve, 400));
 
-                    // Step 3: Setup Cycle Parameters
-                    let programId = 0x00;
-                    let tempHex = 0x00;
-                    let spinHex = 0x64; // Default 1000 RPM
-
-                    // >>> YOUR FINAL MISSING PIECES GO HERE <<<
-                    if (timeMinutes === 15) {        // Express 15
-                        programId = 0x00;            // REPLACE 0x00 WITH SCANNED ID
-                        tempHex = 0x00;              // Cold
-                    } else if (timeMinutes === 54) { // Mix 20
-                        programId = 0x00;            // REPLACE 0x00 WITH SCANNED ID
-                        tempHex = 0x02;              // 20C
-                    } else if (timeMinutes === 46) { // Cotton
-                        programId = 0x00;            // REPLACE 0x00 WITH SCANNED ID
-                        tempHex = 0x04;              // 40C
-                    }
-
-                    // Calculate Checksum (Bytes 2 through 18)
-                    let checksum = (programId + spinHex + 0x01 + tempHex) & 0xFF;
-
-                    // Build the 20-byte payload
-                    const cyclePayload = new Uint8Array([
-                        0xFF, 0xFF,
-                        programId,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        spinHex,
-                        0x00,
-                        0x01,
-                        tempHex,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        checksum
-                    ]);
+                    // Step 3: Map the Time into the 6-byte App Command (5A 14 02 12 XX AA)
+                    let timeHex = 0x06; 
+                    if (timeMinutes === 25) timeHex = 0x19; 
+                    if (timeMinutes === 40) timeHex = 0x28; 
+                    
+                    const cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, timeHex, 0xAA]);
 
                     addLog(`Sending cycle instructions...`);
                     
                     await cmdCharacteristic.writeValueWithoutResponse(cyclePayload);
-                    addLog(`Cycle started. Motor engaged.`, 'success');
+                    addLog(`${timeMinutes} Minute Cycle started. Motor engaged.`, 'success');
                     
                     // UI Lockout
                     const completionTime = Date.now() + (timeMinutes * 60 * 1000);
