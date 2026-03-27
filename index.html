@@ -137,7 +137,7 @@
         const minHand = document.getElementById('minHand');
         const secHand = document.getElementById('secHand');
 
-        // --- HARDWARE UUIDS ---
+        // HARDWARE UUIDS
         const BLE_SERVICE_UUID = '0000fe60-0000-1000-8000-00805f9b34fb';
         const BLE_CMD_CHAR = '0000fe61-0000-1000-8000-00805f9b34fb'; 
         const BLE_AUTH_CHAR = '0000fe63-0000-1000-8000-00805f9b34fb'; 
@@ -257,6 +257,7 @@
                 authCharacteristic = await service.getCharacteristic(BLE_AUTH_CHAR);
                 
                 addLog('Authenticating with washer...');
+                // The A3 bypass handshake
                 const handshakePayload = new Uint8Array([0xA3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
                 await authCharacteristic.writeValueWithoutResponse(handshakePayload);
                 addLog('Authentication successful.', 'success');
@@ -313,7 +314,7 @@
             minHand.style.transform = `translateX(-50%) rotate(${(m * 6) + (s * 0.1)}deg)`;
         }
 
-        // --- THE FLAWLESS 6-BYTE APP PAYLOAD ---
+        // PAYLOAD INJECTION
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const activeEnd = localStorage.getItem('swachham_active_end');
@@ -326,29 +327,25 @@
                 if (!isConnected) return;
                 
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
-                
+                let cyclePayload;
+
+                // Mapping the exact raw payloads from the Wireshark packet captures
+                if (timeMinutes === 40) {
+                    cyclePayload = new Uint8Array([0xFF, 0xFF, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x76]);
+                } 
+                else if (timeMinutes === 25) {
+                    cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, 0x19, 0xAA]); 
+                } 
+                else if (timeMinutes === 6) {
+                    cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, 0x06, 0xAA]);
+                }
+
                 try {
-                    // Step 1: Send the Wake-Up Ping (Crucial for motor engagement)
-                    const pingPayload = new Uint8Array([0x04, 0x06, 0x5C, 0x01, 0x01, 0x02, 0x00, 0x00]);
-                    addLog('Waking up machine...');
-                    await cmdCharacteristic.writeValueWithoutResponse(pingPayload);
-
-                    // Step 2: Wait 400 milliseconds
-                    await new Promise(resolve => setTimeout(resolve, 400));
-
-                    // Step 3: Map the Time into the 6-byte App Command (5A 14 02 12 XX AA)
-                    let timeHex = 0x06; 
-                    if (timeMinutes === 25) timeHex = 0x19; 
-                    if (timeMinutes === 40) timeHex = 0x28; 
-                    
-                    const cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, timeHex, 0xAA]);
-
-                    addLog(`Sending cycle instructions...`);
+                    addLog('Sending cycle instructions...');
                     
                     await cmdCharacteristic.writeValueWithoutResponse(cyclePayload);
                     addLog(`${timeMinutes} Minute Cycle started. Motor engaged.`, 'success');
                     
-                    // UI Lockout
                     const completionTime = Date.now() + (timeMinutes * 60 * 1000);
                     localStorage.setItem('swachham_active_end', completionTime);
 
