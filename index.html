@@ -317,12 +317,19 @@
         // PAYLOAD INJECTION
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                // ---> NEW MODIFIED CODE STARTS HERE <---
                 const activeEnd = localStorage.getItem('swachham_active_end');
                 if (activeEnd) {
                     const remainingMs = parseInt(activeEnd) - Date.now();
-                    if (remainingMs > 0) return; 
-                    else localStorage.removeItem('swachham_active_end'); 
+                    if (remainingMs > 0) {
+                        // This stops the cycle AND tells the user why
+                        addLog('Cannot start: Machine is currently busy!', 'error');
+                        return; 
+                    } else {
+                        localStorage.removeItem('swachham_active_end'); 
+                    }
                 }
+                // ---> NEW MODIFIED CODE ENDS HERE <---
 
                 if (!isConnected) return;
                 
