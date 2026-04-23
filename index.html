@@ -317,28 +317,26 @@
         // PAYLOAD INJECTION
         cycleBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
-                // ---> NEW MODIFIED CODE STARTS HERE <---
                 const activeEnd = localStorage.getItem('swachham_active_end');
                 if (activeEnd) {
                     const remainingMs = parseInt(activeEnd) - Date.now();
                     if (remainingMs > 0) {
-                        // This stops the cycle AND tells the user why
                         addLog('Cannot start: Machine is currently busy!', 'error');
                         return; 
                     } else {
                         localStorage.removeItem('swachham_active_end'); 
                     }
                 }
-                // ---> NEW MODIFIED CODE ENDS HERE <---
 
                 if (!isConnected) return;
                 
                 const timeMinutes = parseInt(e.target.getAttribute('data-time'));
                 let cyclePayload;
 
-                // Mapping the exact raw payloads from the Wireshark packet captures
+                // --- UPDATED HEX PAYLOADS ---
                 if (timeMinutes === 40) {
-                    cyclePayload = new Uint8Array([0xFF, 0xFF, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x01, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x76]);
+                    // Changed 0x04 to 0x01 and updated checksum to 0x73 based on Wireshark logs
+                    cyclePayload = new Uint8Array([0xFF, 0xFF, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x73]);
                 } 
                 else if (timeMinutes === 25) {
                     cyclePayload = new Uint8Array([0x5A, 0x14, 0x02, 0x12, 0x19, 0xAA]); 
